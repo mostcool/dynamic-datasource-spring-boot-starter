@@ -14,21 +14,19 @@
  * limitations under the License.
  * <pre/>
  */
-package com.baomidou.dynamic.datasource.exception;
+package com.baomidou.dynamic.datasource.toolkit;
 
-/**
- * exception when  druid dataSource init failed
- *
- * @author TaoYu
- * @since 2.5.6
- */
-public class ErrorCreateDataSourceException extends RuntimeException {
+public class NamedThreadLocal<T> extends ThreadLocal<T> {
 
-    public ErrorCreateDataSourceException(String message) {
-        super(message);
+    private final String name;
+
+    public NamedThreadLocal(String name) {
+        this.name = name;
     }
 
-    public ErrorCreateDataSourceException(String message, Throwable cause) {
-        super(message, cause);
+    @Override
+    public String toString() {
+        return this.name;
     }
+
 }
