@@ -61,8 +61,11 @@ public class DruidDataSourceCreator {
         dataSource.setUsername(dataSourceProperty.getUsername());
         dataSource.setPassword(dataSourceProperty.getPassword());
         dataSource.setUrl(dataSourceProperty.getUrl());
-        dataSource.setDriverClassName(dataSourceProperty.getDriverClassName());
         dataSource.setName(dataSourceProperty.getPoolName());
+        String driverClassName = dataSourceProperty.getDriverClassName();
+        if (!StringUtils.isEmpty(driverClassName)) {
+            dataSource.setDriverClassName(driverClassName);
+        }
         DruidConfig config = dataSourceProperty.getDruid();
         Properties properties = config.toProperties(druidConfig);
         String filters = properties.getProperty("druid.filters");
@@ -127,7 +130,7 @@ public class DruidDataSourceCreator {
         Integer timeout = config.getRemoveAbandonedTimeoutMillis() == null ? druidConfig.getRemoveAbandonedTimeoutMillis()
                 : config.getRemoveAbandonedTimeoutMillis();
         if (timeout != null) {
-            dataSource.setRemoveAbandonedTimeout(timeout);
+            dataSource.setRemoveAbandonedTimeoutMillis(timeout);
         }
 
         Boolean abandoned = config.getRemoveAbandoned() == null ? druidConfig.getRemoveAbandoned() : config.getRemoveAbandoned();
