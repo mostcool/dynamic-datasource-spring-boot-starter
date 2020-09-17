@@ -16,16 +16,11 @@
  */
 package com.baomidou.dynamic.datasource.aop;
 
-import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.dynamic.datasource.processor.DsProcessor;
 import com.baomidou.dynamic.datasource.support.DataSourceClassResolver;
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
-import lombok.Setter;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-import org.springframework.core.annotation.AnnotationUtils;
-
-import java.lang.reflect.Method;
 
 /**
  * Core Interceptor of Dynamic Datasource
@@ -39,25 +34,28 @@ public class DynamicDataSourceAnnotationInterceptor implements MethodInterceptor
      * The identification of SPEL.
      */
     private static final String DYNAMIC_PREFIX = "#";
-    private static final DataSourceClassResolver RESOLVER = new DataSourceClassResolver();
-    @Setter
-    private DsProcessor dsProcessor;
+
+    private final DataSourceClassResolver dataSourceClassResolver;
+    private final DsProcessor dsProcessor;
+
+    public DynamicDataSourceAnnotationInterceptor(Boolean allowedPublicOnly, DsProcessor dsProcessor) {
+        dataSourceClassResolver = new DataSourceClassResolver(allowedPublicOnly);
+        this.dsProcessor = dsProcessor;
+    }
 
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
         try {
-            DynamicDataSourceContextHolder.push(determineDatasource(invocation));
+            String dsKey = determineDatasourceKey(invocation);
+            DynamicDataSourceContextHolder.push(dsKey);
             return invocation.proceed();
         } finally {
             DynamicDataSourceContextHolder.poll();
         }
     }
 
-    private String determineDatasource(MethodInvocation invocation) throws Throwable {
-        Method method = invocation.getMethod();
-        DS ds = method.isAnnotationPresent(DS.class) ? method.getAnnotation(DS.class)
-                : AnnotationUtils.findAnnotation(RESOLVER.targetClass(invocation), DS.class);
-        String key = ds.value();
+    private String determineDatasourceKey(MethodInvocation invocation) {
+        String key = dataSourceClassResolver.findDSKey(invocation.getMethod(), invocation.getThis());
         return (!key.isEmpty() && key.startsWith(DYNAMIC_PREFIX)) ? dsProcessor.determineDatasource(invocation, key) : key;
     }
 }

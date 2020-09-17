@@ -1,3 +1,29 @@
+# v3.2.1
+
+- 提供注解查找非public方法的扩展。 @刘尚
+- 修复数据源关闭的错误。 @zuihou
+- 修复创建ItemDatasource参数错误。
+- 修复自定义注解在方法上失效。
+- 添加默认的Master和Slave注解。
+- 示例项目整体迁出为独立项目https://gitee.com/baomidou/dynamic-datasource-samples 。
+
+# v3.2.0
+
+- 支持通配符扫描schema文件。 @superlyao
+- 支持配置driverClassName为非必须属性。@Hccake
+- 支持独立配置每个库的p6spy和seata的开启状态。
+- 修复druid设置超时回收时间方法错误。 @liupeng
+- 支持自定义注解，需继承DS。 @liupeng
+- 修复spring.aop.auto=false下不支持问题。  @刘尚
+- 修复多层代理无法获取InvocationHandler的实现类的问题。 @刘尚
+- 修复mybatisPlus3下直接调用lamba方法不支持问题。 @刘尚
+- seata集成优化和示例项目更新1.3.0。  @a364176773
+- 调用DataSourceCreator创建的数据源会包装成ItemDataSource，存储原dataSource和包装后的dataSource。
+- DynamicRoutingDataSource内部关闭数据源优化。
+- breakChange: 去除以前的实验性功能，如正则切换。
+- 示例项目新增quartz和sharding-jdbc的集成。
+- 示例项目整体更新。
+
 # v3.1.1
 
 - revert: 不使用NamedInheritableThreadLocal。

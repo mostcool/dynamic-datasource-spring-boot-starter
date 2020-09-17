@@ -16,6 +16,7 @@
  */
 package com.baomidou.dynamic.datasource.spring.boot.autoconfigure;
 
+import com.baomidou.dynamic.datasource.enums.SeataMode;
 import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.druid.DruidConfig;
 import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.hikari.HikariCpConfig;
 import com.baomidou.dynamic.datasource.strategy.DynamicDataSourceStrategy;
@@ -61,9 +62,13 @@ public class DynamicDataSourceProperties {
      */
     private Boolean p6spy = false;
     /**
-     * 是否使用seata AT或XA,默认不使用
+     * 是否使用开启seata，默认不开启
      */
-    private String seata = null;
+    private Boolean seata = false;
+    /**
+     * seata使用模式，默认AT
+     */
+    private SeataMode seataMode = SeataMode.AT;
     /**
      * 是否使用 spring actuator 监控检查，默认不检查
      */
@@ -95,4 +100,8 @@ public class DynamicDataSourceProperties {
      * 全局默认publicKey
      */
     private String publicKey = CryptoUtils.DEFAULT_PUBLIC_KEY_STRING;
+    /**
+     * aop 切面是否只允许切 public 方法
+     */
+    private boolean allowedPublicOnly = true;
 }

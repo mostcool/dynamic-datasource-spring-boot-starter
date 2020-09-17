@@ -16,8 +16,14 @@
  */
 package com.baomidou.dynamic.datasource.creator;
 
+import com.baomidou.dynamic.datasource.ds.ItemDataSource;
+import com.baomidou.dynamic.datasource.enums.SeataMode;
 import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.DataSourceProperty;
+import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.DynamicDataSourceProperties;
 import com.baomidou.dynamic.datasource.support.ScriptRunner;
+import com.p6spy.engine.spy.P6DataSource;
+import io.seata.rm.datasource.DataSourceProxy;
+import io.seata.rm.datasource.xa.DataSourceProxyXA;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -50,8 +56,6 @@ public class DataSourceCreator {
         try {
             Class.forName(DRUID_DATASOURCE);
             druidExists = true;
-            log.debug("dynamic-datasource detect druid,Please Notice \n " +
-                    "https://github.com/baomidou/dynamic-datasource-spring-boot-starter/wiki/Integration-With-Druid");
         } catch (ClassNotFoundException ignored) {
         }
         try {
@@ -65,7 +69,7 @@ public class DataSourceCreator {
     private JndiDataSourceCreator jndiDataSourceCreator;
     private HikariDataSourceCreator hikariDataSourceCreator;
     private DruidDataSourceCreator druidDataSourceCreator;
-    private String globalPublicKey;
+    private DynamicDataSourceProperties properties;
 
     /**
      * 创建数据源
@@ -97,11 +101,11 @@ public class DataSourceCreator {
                 dataSource = createBasicDataSource(dataSourceProperty);
             }
         }
-        this.runScrip(dataSourceProperty, dataSource);
-        return dataSource;
+        this.runScrip(dataSource, dataSourceProperty);
+        return wrapDataSource(dataSource, dataSourceProperty);
     }
 
-    private void runScrip(DataSourceProperty dataSourceProperty, DataSource dataSource) {
+    private void runScrip(DataSource dataSource, DataSourceProperty dataSourceProperty) {
         String schema = dataSourceProperty.getSchema();
         String data = dataSourceProperty.getData();
         if (StringUtils.hasText(schema) || StringUtils.hasText(data)) {
@@ -115,6 +119,25 @@ public class DataSourceCreator {
         }
     }
 
+    private DataSource wrapDataSource(DataSource dataSource, DataSourceProperty dataSourceProperty) {
+        String name = dataSourceProperty.getPoolName();
+        DataSource targetDataSource = dataSource;
+
+        Boolean enabledP6spy = properties.getP6spy() && dataSourceProperty.getP6spy();
+        if (enabledP6spy) {
+            targetDataSource = new P6DataSource(dataSource);
+            log.debug("dynamic-datasource [{}] wrap p6spy plugin", name);
+        }
+
+        Boolean enabledSeata = properties.getSeata() && dataSourceProperty.getSeata();
+        SeataMode seataMode = properties.getSeataMode();
+        if (enabledSeata) {
+            targetDataSource = SeataMode.XA == seataMode ? new DataSourceProxyXA(dataSource) : new DataSourceProxy(dataSource);
+            log.debug("dynamic-datasource [{}] wrap seata plugin transaction mode [{}]", name, seataMode);
+        }
+        return new ItemDataSource(name, dataSource, targetDataSource, enabledP6spy, enabledSeata, seataMode);
+    }
+
     /**
      * 创建基础数据源
      *
@@ -123,7 +146,7 @@ public class DataSourceCreator {
      */
     public DataSource createBasicDataSource(DataSourceProperty dataSourceProperty) {
         if (StringUtils.isEmpty(dataSourceProperty.getPublicKey())) {
-            dataSourceProperty.setPublicKey(globalPublicKey);
+            dataSourceProperty.setPublicKey(properties.getPublicKey());
         }
         return basicDataSourceCreator.createDataSource(dataSourceProperty);
     }
@@ -146,7 +169,7 @@ public class DataSourceCreator {
      */
     public DataSource createDruidDataSource(DataSourceProperty dataSourceProperty) {
         if (StringUtils.isEmpty(dataSourceProperty.getPublicKey())) {
-            dataSourceProperty.setPublicKey(globalPublicKey);
+            dataSourceProperty.setPublicKey(properties.getPublicKey());
         }
         return druidDataSourceCreator.createDataSource(dataSourceProperty);
     }
@@ -160,7 +183,7 @@ public class DataSourceCreator {
      */
     public DataSource createHikariDataSource(DataSourceProperty dataSourceProperty) {
         if (StringUtils.isEmpty(dataSourceProperty.getPublicKey())) {
-            dataSourceProperty.setPublicKey(globalPublicKey);
+            dataSourceProperty.setPublicKey(properties.getPublicKey());
         }
         return hikariDataSourceCreator.createDataSource(dataSourceProperty);
     }

@@ -16,15 +16,21 @@
  */
 package com.baomidou.dynamic.datasource.support;
 
+import com.baomidou.dynamic.datasource.annotation.DS;
 import lombok.extern.slf4j.Slf4j;
-import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.framework.AopProxyUtils;
+import org.springframework.core.BridgeMethodResolver;
+import org.springframework.core.MethodClassKey;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.annotation.AnnotationAttributes;
+import org.springframework.util.ClassUtils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Proxy;
+import java.lang.reflect.*;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 获取对mybatis-plus的支持
+ * 数据源解析器
  *
  * @author TaoYu
  * @since 2.3.0
@@ -46,7 +52,7 @@ public class DataSourceClassResolver {
             } catch (ClassNotFoundException e2) {
                 try {
                     proxyClass = Class.forName("org.apache.ibatis.binding.MapperProxy");
-                } catch (ClassNotFoundException e3) {
+                } catch (ClassNotFoundException ignored) {
                 }
             }
         }
@@ -61,12 +67,118 @@ public class DataSourceClassResolver {
         }
     }
 
-    public Class<?> targetClass(MethodInvocation invocation) throws IllegalAccessException {
-        if (mpEnabled) {
-            Object target = invocation.getThis();
-            return getInvocationHandler(target);
+    /**
+     * 缓存方法对应的数据源
+     */
+    private final Map<Object, String> dsCache = new ConcurrentHashMap<>();
+    private final boolean allowedPublicOnly;
+
+    /**
+     * 加入扩展, 给外部一个修改aop条件的机会
+     *
+     * @param allowedPublicOnly 只允许公共的方法, 默认为true
+     */
+    public DataSourceClassResolver(boolean allowedPublicOnly) {
+        this.allowedPublicOnly = allowedPublicOnly;
+    }
+
+    /**
+     * 从缓存获取数据
+     *
+     * @param method       方法
+     * @param targetObject 目标对象
+     * @return ds
+     */
+    public String findDSKey(Method method, Object targetObject) {
+        if (method.getDeclaringClass() == Object.class) {
+            return "";
         }
-        return invocation.getMethod().getDeclaringClass();
+        Object cacheKey = new MethodClassKey(method, targetObject.getClass());
+        String ds = this.dsCache.get(cacheKey);
+        if (ds == null) {
+            ds = computeDatasource(method, targetObject);
+            if (ds == null) {
+                ds = "";
+            }
+            this.dsCache.put(cacheKey, ds);
+        }
+        return ds;
+    }
+
+    /**
+     * 查找注解的顺序
+     * 1. 当前方法
+     * 2. 桥接方法
+     * 3. 当前类开始一直找到Object
+     * 4. 支持mybatis-plus, mybatis-spring
+     *
+     * @param method       方法
+     * @param targetObject 目标对象
+     * @return ds
+     */
+    private String computeDatasource(Method method, Object targetObject) {
+        if (allowedPublicOnly && !Modifier.isPublic(method.getModifiers())) {
+            return null;
+        }
+        Class<?> targetClass = targetObject.getClass();
+        Class<?> userClass = ClassUtils.getUserClass(targetClass);
+        // JDK代理时,  获取实现类的方法声明.  method: 接口的方法, specificMethod: 实现类方法
+        Method specificMethod = ClassUtils.getMostSpecificMethod(method, userClass);
+
+        specificMethod = BridgeMethodResolver.findBridgedMethod(specificMethod);
+        // 从当前方法查找
+        String dsAttr = findDataSourceAttribute(specificMethod);
+        if (dsAttr != null) {
+            return dsAttr;
+        }
+        // 从当前方法声明的类查找
+        dsAttr = findDataSourceAttribute(specificMethod.getDeclaringClass());
+        if (dsAttr != null && ClassUtils.isUserLevelMethod(method)) {
+            return dsAttr;
+        }
+        // 如果存在桥接方法
+        if (specificMethod != method) {
+            // 从桥接方法查找
+            dsAttr = findDataSourceAttribute(method);
+            if (dsAttr != null) {
+                return dsAttr;
+            }
+            // 从桥接方法声明的类查找
+            dsAttr = findDataSourceAttribute(method.getDeclaringClass());
+            if (dsAttr != null && ClassUtils.isUserLevelMethod(method)) {
+                return dsAttr;
+            }
+        }
+        return getDefaultDataSourceAttr(targetObject);
+    }
+
+    /**
+     * 默认的获取数据源名称方式
+     *
+     * @param targetObject 目标对象
+     * @return ds
+     */
+    private String getDefaultDataSourceAttr(Object targetObject) {
+        Class<?> targetClass = targetObject.getClass();
+        // 如果不是代理类, 从当前类开始, 不断的找父类的声明
+        if (!Proxy.isProxyClass(targetClass)) {
+            Class<?> currentClass = targetClass;
+            while (currentClass != Object.class) {
+                String datasourceAttr = findDataSourceAttribute(currentClass);
+                if (datasourceAttr != null) {
+                    return datasourceAttr;
+                }
+                currentClass = currentClass.getSuperclass();
+            }
+        }
+        // mybatis-plus, mybatis-spring 的获取方式
+        if (mpEnabled) {
+            final Class<?> clazz = getMapperInterfaceClass(targetObject);
+            if (clazz != null) {
+                return findDataSourceAttribute(clazz);
+            }
+        }
+        return null;
     }
 
     /**
@@ -74,9 +186,8 @@ public class DataSourceClassResolver {
      *
      * @param target JDK 代理类对象
      * @return InvocationHandler 的 Class
-     * @throws IllegalAccessException
      */
-    protected Class<?> getInvocationHandler(Object target) throws IllegalAccessException {
+    private Class<?> getMapperInterfaceClass(Object target) {
         Object current = target;
         while (Proxy.isProxyClass(current.getClass())) {
             Object currentRefObject = AopProxyUtils.getSingletonTarget(current);
@@ -85,6 +196,26 @@ public class DataSourceClassResolver {
             }
             current = currentRefObject;
         }
-        return (Class<?>) mapperInterfaceField.get(Proxy.getInvocationHandler(current));
+        try {
+            if (Proxy.isProxyClass(current.getClass())) {
+                return (Class<?>) mapperInterfaceField.get(Proxy.getInvocationHandler(current));
+            }
+        } catch (IllegalAccessException ignore) {
+        }
+        return null;
+    }
+
+    /**
+     * 通过 AnnotatedElement 查找标记的注解, 映射为  DatasourceHolder
+     *
+     * @param ae AnnotatedElement
+     * @return 数据源映射持有者
+     */
+    private String findDataSourceAttribute(AnnotatedElement ae) {
+        AnnotationAttributes attributes = AnnotatedElementUtils.getMergedAnnotationAttributes(ae, DS.class);
+        if (attributes != null) {
+            return attributes.getString("value");
+        }
+        return null;
     }
 }

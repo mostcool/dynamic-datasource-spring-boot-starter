@@ -29,6 +29,7 @@ import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.druid.DruidDyna
 import com.baomidou.dynamic.datasource.strategy.DynamicDataSourceStrategy;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -37,6 +38,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Role;
 
 import javax.sql.DataSource;
 import java.util.Map;
@@ -81,11 +83,11 @@ public class DynamicDataSourceAutoConfiguration {
         return dataSource;
     }
 
+    @Role(value = BeanDefinition.ROLE_INFRASTRUCTURE)
     @Bean
     @ConditionalOnMissingBean
     public DynamicDataSourceAnnotationAdvisor dynamicDatasourceAnnotationAdvisor(DsProcessor dsProcessor) {
-        DynamicDataSourceAnnotationInterceptor interceptor = new DynamicDataSourceAnnotationInterceptor();
-        interceptor.setDsProcessor(dsProcessor);
+        DynamicDataSourceAnnotationInterceptor interceptor = new DynamicDataSourceAnnotationInterceptor(properties.isAllowedPublicOnly(), dsProcessor);
         DynamicDataSourceAnnotationAdvisor advisor = new DynamicDataSourceAnnotationAdvisor(interceptor);
         advisor.setOrder(properties.getOrder());
         return advisor;
@@ -101,4 +103,5 @@ public class DynamicDataSourceAutoConfiguration {
         sessionProcessor.setNextProcessor(spelExpressionProcessor);
         return headerProcessor;
     }
+
 }
