@@ -16,7 +16,12 @@
  */
 package com.baomidou.dynamic.datasource.ds;
 
+import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
+import com.baomidou.dynamic.datasource.tx.ConnectionFactory;
+import com.baomidou.dynamic.datasource.tx.ConnectionProxy;
+import com.baomidou.dynamic.datasource.tx.TransactionContext;
 import org.springframework.jdbc.datasource.AbstractDataSource;
+import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -30,21 +35,37 @@ import java.sql.SQLException;
  */
 public abstract class AbstractRoutingDataSource extends AbstractDataSource {
 
-    /**
-     * 子类实现决定最终数据源
-     *
-     * @return 数据源
-     */
     protected abstract DataSource determineDataSource();
 
     @Override
     public Connection getConnection() throws SQLException {
-        return determineDataSource().getConnection();
+        String xid = TransactionContext.getXID();
+        if (StringUtils.isEmpty(xid)) {
+            return determineDataSource().getConnection();
+        } else {
+            String ds = DynamicDataSourceContextHolder.peek();
+            ConnectionProxy connection = ConnectionFactory.getConnection(ds);
+            return connection == null ? getConnectionProxy(ds, determineDataSource().getConnection()) : connection;
+        }
     }
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
-        return determineDataSource().getConnection(username, password);
+        String xid = TransactionContext.getXID();
+        if (StringUtils.isEmpty(xid)) {
+            return determineDataSource().getConnection(username, password);
+        } else {
+            String ds = DynamicDataSourceContextHolder.peek();
+            ConnectionProxy connection = ConnectionFactory.getConnection(ds);
+            return connection == null ? getConnectionProxy(ds, determineDataSource().getConnection(username, password))
+                    : connection;
+        }
+    }
+
+    private Connection getConnectionProxy(String ds, Connection connection) {
+        ConnectionProxy connectionProxy = new ConnectionProxy(connection, ds);
+        ConnectionFactory.putConnection(ds, connectionProxy);
+        return connectionProxy;
     }
 
     @Override

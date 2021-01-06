@@ -14,27 +14,21 @@
  * limitations under the License.
  * <pre/>
  */
-package com.baomidou.dynamic.datasource.strategy;
+package com.baomidou.dynamic.datasource.creator;
+
+import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.DataSourceProperty;
 
 import javax.sql.DataSource;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Random strategy to switch a database
+ * 默认创建数据源无参的调用有参的
  *
- * @author TaoYu Kanyuxia
- * @since 1.0.0
+ * @author ls9527
  */
-public class RandomDynamicDataSourceStrategy implements DynamicDataSourceStrategy {
+public abstract class AbstractDataSourceCreator implements DataSourceCreator {
 
     @Override
-    public DataSource determineDataSource(List<DataSource> dataSources) {
-        return dataSources.get(ThreadLocalRandom.current().nextInt(dataSources.size()));
-    }
-
-    @Override
-    public String determineDSKey(List<String> dsNames) {
-        return dsNames.get(ThreadLocalRandom.current().nextInt(dsNames.size()));
+    public DataSource createDataSource(DataSourceProperty dataSourceProperty) {
+        return createDataSource(dataSourceProperty, null);
     }
 }

@@ -31,7 +31,9 @@ dynamic-datasource-spring-boot-starter 是一个基于springboot的快速集成�
 
 其支持 **Jdk 1.7+,    SpringBoot 1.4.x  1.5.x   2.x.x**。
 
-**示例项目** https://gitee.com/baomidou/dynamic-datasource-samples 。
+## 文档 | Documentation
+
+[中文](http://dynamic-datasource.com/)  | [English](http://dynamic-datasource.com/en)
 
 # 特性
 
@@ -48,6 +50,7 @@ dynamic-datasource-spring-boot-starter 是一个基于springboot的快速集成�
 11. 支持  **多层数据源嵌套切换** 。（ServiceA >>>  ServiceB >>> ServiceC）。
 12. 提供对shiro，sharding-jdbc,quartz等第三方库集成的方案,注意事项和示例。
 13. 提供  **基于seata的分布式事务方案。** 附：不支持原生spring事务。
+14. 提供  **本地多数据源事务方案。** 附：不支持原生spring事务。
 
 # 约定
 
@@ -146,13 +149,7 @@ public class UserServiceImpl implements UserService {
 
 ---
 
-#### 赶紧集成体验一下吧！ 如果需要更多功能请点击下面链接查看详细文档！
-
----
-[常见问题请点我](https://github.com/baomidou/dynamic-datasource-spring-boot-starter/wiki/FAQ)
-[分布式事务，加密,Druid集成，MybatisPlus集成，动态增减数据源，自定义切换规则,纯读写分离插件等等更多更细致的文档在这里](https://github.com/baomidou/dynamic-datasource-spring-boot-starter/wiki)
-
-### 支持一下
+# 捐赠
 
 ![uSA83t.png](https://images.gitee.com/uploads/images/2019/0921/225754_ef8c21e8_709883.png)
 ![uSVpFJ.png](https://images.gitee.com/uploads/images/2019/0921/230525_be693c65_709883.png)

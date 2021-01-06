@@ -1,3 +1,6 @@
+Please fill it out carefully, or it will be closed.
+请认真填写，不然会直接关闭。
+
 # Enviroment
 
 JDK Version(required): 
@@ -8,18 +11,22 @@ dynamic-datasource-spring-boot-starter Version(required):
 
 druid Version(optional):
 
-# Describe
+
+# Describe what happened
+
+
+Expected Result:
 
 
 
+Actual Result:
 
 
-Expected Result: 
+If there is an exception,or aop invalid,please attach the exception trace:
 
-
-
-Actual Result:  
-
+```
+Just paste your stack trace here!
+```
 
 
 # Steps to reproduce
