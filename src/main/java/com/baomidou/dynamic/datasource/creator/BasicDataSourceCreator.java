@@ -1,6 +1,6 @@
-/**
+/*
  * Copyright © 2018 organization baomidou
- * <pre>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * <pre/>
  */
 package com.baomidou.dynamic.datasource.creator;
 
@@ -20,7 +19,6 @@ import com.baomidou.dynamic.datasource.exception.ErrorCreateDataSourceException;
 import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.DataSourceProperty;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Method;
@@ -33,7 +31,7 @@ import java.lang.reflect.Method;
  */
 @Data
 @Slf4j
-public class BasicDataSourceCreator extends AbstractDataSourceCreator implements DataSourceCreator {
+public class BasicDataSourceCreator implements DataSourceCreator {
 
     private static Method createMethod;
     private static Method typeMethod;
@@ -76,14 +74,10 @@ public class BasicDataSourceCreator extends AbstractDataSourceCreator implements
      * 创建基础数据源
      *
      * @param dataSourceProperty 数据源参数
-     * @param publicKey          解密公钥
      * @return 数据源
      */
     @Override
-    public DataSource createDataSource(DataSourceProperty dataSourceProperty, String publicKey) {
-        if (StringUtils.isEmpty(dataSourceProperty.getPublicKey())) {
-            dataSourceProperty.setPublicKey(publicKey);
-        }
+    public DataSource createDataSource(DataSourceProperty dataSourceProperty) {
         try {
             Object o1 = createMethod.invoke(null);
             Object o2 = typeMethod.invoke(o1, dataSourceProperty.getType());

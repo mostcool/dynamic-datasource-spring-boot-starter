@@ -1,6 +1,6 @@
-/**
+/*
  * Copyright © 2018 organization baomidou
- * <pre>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,23 +12,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * <pre/>
  */
-package com.baomidou.dynamic.datasource.creator;
-
-import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.DataSourceProperty;
-
-import javax.sql.DataSource;
+package com.baomidou.dynamic.datasource.exception;
 
 /**
- * 默认创建数据源无参的调用有参的
+ * exception when dataSource cannot select
  *
- * @author ls9527
+ * @author TaoYu
+ * @since 2.5.6
  */
-public abstract class AbstractDataSourceCreator implements DataSourceCreator {
+public class CannotFindDataSourceException extends RuntimeException {
 
-    @Override
-    public DataSource createDataSource(DataSourceProperty dataSourceProperty) {
-        return createDataSource(dataSourceProperty, null);
+    public CannotFindDataSourceException(String message) {
+        super(message);
+    }
+
+    public CannotFindDataSourceException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

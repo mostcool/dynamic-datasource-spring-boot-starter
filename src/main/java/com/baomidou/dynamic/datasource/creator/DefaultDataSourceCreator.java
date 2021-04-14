@@ -1,6 +1,6 @@
-/**
+/*
  * Copyright © 2018 organization baomidou
- * <pre>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * <pre/>
  */
 package com.baomidou.dynamic.datasource.creator;
 
@@ -39,18 +38,12 @@ import java.util.List;
  */
 @Slf4j
 @Setter
-public class DefaultDataSourceCreator implements DataSourceCreator {
+public class DefaultDataSourceCreator {
 
     private DynamicDataSourceProperties properties;
     private List<DataSourceCreator> creators;
 
-    @Override
     public DataSource createDataSource(DataSourceProperty dataSourceProperty) {
-        return createDataSource(dataSourceProperty, properties.getPublicKey());
-    }
-
-    @Override
-    public DataSource createDataSource(DataSourceProperty dataSourceProperty, String publicKey) {
         DataSourceCreator dataSourceCreator = null;
         for (DataSourceCreator creator : this.creators) {
             if (creator.support(dataSourceProperty)) {
@@ -61,7 +54,18 @@ public class DefaultDataSourceCreator implements DataSourceCreator {
         if (dataSourceCreator == null) {
             throw new IllegalStateException("creator must not be null,please check the DataSourceCreator");
         }
-        DataSource dataSource = dataSourceCreator.createDataSource(dataSourceProperty, publicKey);
+
+        String publicKey = dataSourceProperty.getPublicKey();
+        if (StringUtils.isEmpty(publicKey)) {
+            dataSourceProperty.setPublicKey(properties.getPublicKey());
+        }
+
+        Boolean lazy = dataSourceProperty.getLazy();
+        if (lazy == null) {
+            dataSourceProperty.setLazy(properties.getLazy());
+        }
+
+        DataSource dataSource = dataSourceCreator.createDataSource(dataSourceProperty);
         this.runScrip(dataSource, dataSourceProperty);
         return wrapDataSource(dataSource, dataSourceProperty);
     }
@@ -101,14 +105,5 @@ public class DefaultDataSourceCreator implements DataSourceCreator {
             log.debug("dynamic-datasource [{}] wrap seata plugin transaction mode [{}]", name, seataMode);
         }
         return new ItemDataSource(name, dataSource, targetDataSource, enabledP6spy, enabledSeata, seataMode);
-    }
-
-    public void setDataSourceCreators(List<DataSourceCreator> dataSourceCreator) {
-        this.creators = dataSourceCreator;
-    }
-
-    @Override
-    public boolean support(DataSourceProperty dataSourceProperty) {
-        return true;
     }
 }

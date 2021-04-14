@@ -1,6 +1,6 @@
-/**
+/*
  * Copyright © 2018 organization baomidou
- * <pre>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,14 +12,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * <pre/>
  */
 package com.baomidou.dynamic.datasource.spring.boot.autoconfigure;
 
 import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import com.baomidou.dynamic.datasource.aop.DynamicDataSourceAnnotationAdvisor;
 import com.baomidou.dynamic.datasource.aop.DynamicDataSourceAnnotationInterceptor;
-import com.baomidou.dynamic.datasource.aop.DynamicTransactionAdvisor;
+import com.baomidou.dynamic.datasource.aop.DynamicLocalTransactionAdvisor;
 import com.baomidou.dynamic.datasource.processor.DsHeaderProcessor;
 import com.baomidou.dynamic.datasource.processor.DsProcessor;
 import com.baomidou.dynamic.datasource.processor.DsSessionProcessor;
@@ -103,7 +102,7 @@ public class DynamicDataSourceAutoConfiguration {
     public Advisor dynamicTransactionAdvisor() {
         AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
         pointcut.setExpression("@annotation(com.baomidou.dynamic.datasource.annotation.DSTransactional)");
-        return new DefaultPointcutAdvisor(pointcut, new DynamicTransactionAdvisor());
+        return new DefaultPointcutAdvisor(pointcut, new DynamicLocalTransactionAdvisor());
     }
 
     @Bean
