@@ -23,10 +23,10 @@ import com.alibaba.druid.wall.WallConfig;
 import com.alibaba.druid.wall.WallFilter;
 import com.baomidou.dynamic.datasource.exception.ErrorCreateDataSourceException;
 import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.DataSourceProperty;
+import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.DynamicDataSourceProperties;
 import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.druid.DruidConfig;
 import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.druid.DruidSlf4jConfig;
 import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.druid.DruidWallConfigUtil;
-import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.StringUtils;
@@ -45,8 +45,7 @@ import static com.baomidou.dynamic.datasource.support.DdConstants.DRUID_DATASOUR
  * @author TaoYu
  * @since 2020/1/21
  */
-@Data
-public class DruidDataSourceCreator implements DataSourceCreator {
+public class DruidDataSourceCreator extends AbstractDataSourceCreator implements DataSourceCreator {
 
     private static Boolean druidExists = false;
 
@@ -58,17 +57,18 @@ public class DruidDataSourceCreator implements DataSourceCreator {
         }
     }
 
-    private DruidConfig gConfig;
+    private final DruidConfig gConfig;
 
     @Autowired(required = false)
     private ApplicationContext applicationContext;
 
-    public DruidDataSourceCreator(DruidConfig gConfig) {
-        this.gConfig = gConfig;
+    public DruidDataSourceCreator(DynamicDataSourceProperties dynamicDataSourceProperties) {
+        super(dynamicDataSourceProperties);
+        this.gConfig = dynamicDataSourceProperties.getDruid();
     }
 
     @Override
-    public DataSource createDataSource(DataSourceProperty dataSourceProperty) {
+    public DataSource doCreateDataSource(DataSourceProperty dataSourceProperty) {
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.setUsername(dataSourceProperty.getUsername());
         dataSource.setPassword(dataSourceProperty.getPassword());
@@ -90,7 +90,7 @@ public class DruidDataSourceCreator implements DataSourceCreator {
         //设置druid内置properties不支持的的参数
         this.setParam(dataSource, config);
 
-        if (!dataSourceProperty.getLazy()) {
+        if (Boolean.FALSE.equals(dataSourceProperty.getLazy())) {
             try {
                 dataSource.init();
             } catch (SQLException e) {

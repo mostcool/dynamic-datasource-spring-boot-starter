@@ -17,19 +17,22 @@ package com.baomidou.dynamic.datasource;
 
 import com.baomidou.dynamic.datasource.ds.AbstractRoutingDataSource;
 import com.baomidou.dynamic.datasource.ds.GroupDataSource;
-import com.baomidou.dynamic.datasource.ds.ItemDataSource;
 import com.baomidou.dynamic.datasource.exception.CannotFindDataSourceException;
 import com.baomidou.dynamic.datasource.provider.DynamicDataSourceProvider;
 import com.baomidou.dynamic.datasource.strategy.DynamicDataSourceStrategy;
 import com.baomidou.dynamic.datasource.strategy.LoadBalanceDynamicDataSourceStrategy;
+import com.baomidou.dynamic.datasource.toolkit.DatabasebUtils;
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -44,15 +47,15 @@ public class DynamicRoutingDataSource extends AbstractRoutingDataSource implemen
 
     private static final String UNDERLINE = "_";
     /**
-     * 所有数据库
+     * 所有数据库¬
      */
     private final Map<String, DataSource> dataSourceMap = new ConcurrentHashMap<>();
     /**
      * 分组数据库
      */
     private final Map<String, GroupDataSource> groupDataSources = new ConcurrentHashMap<>();
-    @Setter
-    private DynamicDataSourceProvider provider;
+    @Autowired
+    private List<DynamicDataSourceProvider> providers;
     @Setter
     private Class<? extends DynamicDataSourceStrategy> strategy = LoadBalanceDynamicDataSourceStrategy.class;
     @Setter
@@ -85,19 +88,41 @@ public class DynamicRoutingDataSource extends AbstractRoutingDataSource implemen
 
     /**
      * 获取当前所有的数据源
+     * please use getDataSources()
      *
      * @return 当前所有数据源
      */
+    @Deprecated
     public Map<String, DataSource> getCurrentDataSources() {
         return dataSourceMap;
     }
 
     /**
+     * 获取所有的数据源
+     *
+     * @return 当前所有数据源
+     */
+    public Map<String, DataSource> getDataSources() {
+        return dataSourceMap;
+    }
+
+    /**
      * 获取的当前所有的分组数据源
+     * please use getGroupDataSources()
      *
      * @return 当前所有的分组数据源
      */
+    @Deprecated
     public Map<String, GroupDataSource> getCurrentGroupDataSources() {
+        return groupDataSources;
+    }
+
+    /**
+     * 获取的所有的分组数据源
+     *
+     * @return 当前所有的分组数据源
+     */
+    public Map<String, GroupDataSource> getGroupDataSources() {
         return groupDataSources;
     }
 
@@ -135,11 +160,7 @@ public class DynamicRoutingDataSource extends AbstractRoutingDataSource implemen
         this.addGroupDataSource(ds, dataSource);
         // 关闭老的数据源
         if (oldDataSource != null) {
-            try {
-                closeDataSource(oldDataSource);
-            } catch (Exception e) {
-                log.error("dynamic-datasource - remove the database named [{}]  failed", ds, e);
-            }
+            DatabasebUtils.closeDataSource(ds, oldDataSource);
         }
         log.info("dynamic-datasource - add a datasource named [{}] success", ds);
     }
@@ -180,20 +201,14 @@ public class DynamicRoutingDataSource extends AbstractRoutingDataSource implemen
         }
         if (dataSourceMap.containsKey(ds)) {
             DataSource dataSource = dataSourceMap.remove(ds);
-            try {
-                closeDataSource(dataSource);
-            } catch (Exception e) {
-                log.error("dynamic-datasource - remove the database named [{}]  failed", ds, e);
-            }
+            DatabasebUtils.closeDataSource(ds, dataSource);
 
             if (ds.contains(UNDERLINE)) {
                 String group = ds.split(UNDERLINE)[0];
                 if (groupDataSources.containsKey(group)) {
                     DataSource oldDataSource = groupDataSources.get(group).removeDatasource(ds);
                     if (oldDataSource == null) {
-                        if (log.isWarnEnabled()) {
-                            log.warn("fail for remove datasource from group. dataSource: {} ,group: {}", ds, group);
-                        }
+                        log.warn("fail for remove datasource from group. dataSource: {} ,group: {}", ds, group);
                     }
                 }
             }
@@ -203,18 +218,11 @@ public class DynamicRoutingDataSource extends AbstractRoutingDataSource implemen
         }
     }
 
-    /**
-     * 关闭数据源
-     */
-    private void closeDataSource(DataSource dataSource) throws Exception {
-        ((ItemDataSource) dataSource).close();
-    }
-
     @Override
     public void destroy() throws Exception {
         log.info("dynamic-datasource start closing ....");
         for (Map.Entry<String, DataSource> item : dataSourceMap.entrySet()) {
-            closeDataSource(item.getValue());
+            DatabasebUtils.closeDataSource(item.getKey(), item.getValue());
         }
         log.info("dynamic-datasource all closed success,bye");
     }
@@ -224,7 +232,10 @@ public class DynamicRoutingDataSource extends AbstractRoutingDataSource implemen
         // 检查开启了配置但没有相关依赖
         checkEnv();
         // 添加并分组数据源
-        Map<String, DataSource> dataSources = provider.loadDataSources();
+        Map<String, DataSource> dataSources = new HashMap<>();
+        for (DynamicDataSourceProvider provider : providers) {
+            dataSources.putAll(provider.loadDataSources());
+        }
         for (Map.Entry<String, DataSource> dsItem : dataSources.entrySet()) {
             addDataSource(dsItem.getKey(), dsItem.getValue());
         }
@@ -256,4 +267,5 @@ public class DynamicRoutingDataSource extends AbstractRoutingDataSource implemen
             }
         }
     }
+
 }

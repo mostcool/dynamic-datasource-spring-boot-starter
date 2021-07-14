@@ -13,24 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.baomidou.dynamic.datasource.toolkit;
+package com.baomidou.dynamic.datasource.spring.boot.autoconfigure;
 
-public class StringUtils {
+/**
+ * @author hzh727172424
+ * @since 3.4.0
+ */
+public interface DynamicDataSourcePropertiesCustomizer {
 
-    public static boolean isBlank(String str) {
-        int strLen;
-        if (str == null || (strLen = str.length()) == 0) {
-            return true;
-        }
-        for (int i = 0; i < strLen; i++) {
-            if ((!Character.isWhitespace(str.charAt(i)))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public static boolean isNotBlank(String str) {
-        return !org.apache.commons.lang.StringUtils.isBlank(str);
-    }
+    /**
+     * Customize the given a {@link DynamicDataSourceProperties} object.
+     *
+     * @param properties the DynamicDataSourceProperties object to customize
+     */
+    void customize(DynamicDataSourceProperties properties);
 }
